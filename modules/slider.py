@@ -14,16 +14,18 @@ class Slider:
     def bind_surface(self, surface):
         self.bind = True
         self.step = surface.maxOffset/self.rect[3]
-        self.scrollstep = self.rect[3]/surface.maxOffset
+        self.scrollstep = self.rect[3]/surface.maxOffset if surface.maxOffset != 0 else 0
         self.scene = surface
-
+        
     def update(self, args: dict):
         if not self.surfaceScroll:
             args['mouseRect'].x += args['offset'][0]
             args['mouseRect'].y += args['offset'][1]
 
-        if pygame.Rect.colliderect(args['mouseRect'], (self.rect[0]-self.rect[2], self.rect[1], self.rect[2]*3, self.rect[3])) and args['mousePressed'][0]:
-            self.position = args['mouseRect'].y - self.rect[1] if self.vertical else args['mouseRect'].x - self.rect[0]
+        rect = pygame.Rect(((self.rect[0]-self.rect[2])+args['position'][0], self.rect[1]+args['position'][1], self.rect[2]*3, self.rect[3]))
+
+        if pygame.Rect.colliderect(args['mouseRect'], rect) and args['mousePressed'][0]:
+            self.position = args['mouseRect'].y - (self.rect[1]+args['position'][1]) if self.vertical else args['mouseRect'].x - (self.rect[0]+args['position'][0])
 
             if self.bind:
                 self.scene.offset[1] = (-self.step)*self.position

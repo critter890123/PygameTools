@@ -26,7 +26,7 @@ keys = {
 
 
 class TextBox:
-    def __init__(self, font: pygame.font, rect: tuple[int, int, int, int], backgroundColor: tuple[int, int, int], textColor: tuple[int, int, int], placeholder: str = ""):
+    def __init__(self, font: pygame.font, rect: tuple[int, int, int, int], backgroundColor: tuple[int, int, int], textColor: tuple[int, int, int] = (0, 0, 0), placeholder: str = ""):
         self.placeholder = placeholder
         self.text = ""
         self.font = font
@@ -35,27 +35,34 @@ class TextBox:
         self.rect = rect
             
         self.selected = False
-        self.timer = time.time()
+        self.lastTime = time.time()
+        self.delay = 0.75
+        self.character = " |"
 
         self.keyTimer = time.time()
         self.lastKey = None
 
     def toggle(self, args: dict):
-        args['mouseRect'].x -= args['offset'][0]
-        args['mouseRect'].y -= args['offset'][1]
 
-        if pygame.Rect.colliderect(pygame.Rect(self.rect), args['mouseRect']):
+        rect = [self.rect[0] + (args['position'][0] + args['offset'][0]), self.rect[1] + (args['position'][1] + args['offset'][1]), self.rect[2], self.rect[3]]
+
+        if pygame.Rect.colliderect(pygame.Rect(rect), args['mouseRect']):
             self.selected = True
+            self.character = " |"
+            self.lastTime = time.time()
         else:
             self.selected = False
 
     def update(self, args: dict):
-        keys = getKeys(args['keyPressed'])
-        if len(keys) == 0:
-            self.keyTimer -= 0.15
+        if 'keyPressed' not in args:
+            self.keyTimer -= 0.2
             return
 
-        if self.selected and (self.lastKey is None or self.lastKey != keys[0] or (time.time() - self.keyTimer > 0.15)):
+        keys = getKeys(args['keyPressed'])
+        if len(keys) == 0:
+            return
+
+        if self.selected and (self.lastKey is None or self.lastKey != keys[0] or (time.time() - self.keyTimer > 0.2)):
             self.keyTimer = time.time()
             self.lastKey = keys[0]
 
@@ -71,23 +78,27 @@ class TextBox:
             else:
                 self.text += keys[0] if not caps else keys[0].upper()
 
-    def timerUpdate(self):
-        self.timer = time.time()
-        if math.floor(self.timer) % 2 == 0:
-            return True
-        else:
-            return False
+    def characterUpdate(self):
+        if time.time() - self.lastTime > self.delay:
+            self.lastTime = time.time()
+            if self.character == " |":
+                self.character = ""
+            else:
+                self.character = " |"
+            
 
     def draw(self, screen: pygame.Surface, offset: list[int, int]):
+        self.characterUpdate()
+
         textRect = (self.rect[0]+5, self.rect[1]+5)
-        text = (self.text if self.text != "" else self.placeholder) + (" |" if self.selected and self.timerUpdate() else "")
+        text = (self.text if self.text != "" else self.placeholder) + (self.character if self.selected else "")
 
         rect = [position+offset for position, offset in zip(self.rect[:2], offset)] + list(self.rect[2:])
         
         pygame.draw.rect(screen, self.backgroundColor, rect)
         pygame.draw.rect(screen, (0, 0, 0) if not self.backgroundColor == ("black" or (0, 0, 0)) else (255, 255, 255), rect, 2)
 
-        Text(self.font, self.textColor, text, textRect, False, self.rect[2]-20).draw(screen, offset)
+        Text(self.font, textRect, self.textColor, text, False, self.rect[2]-20).draw(screen, offset)
 
 
         

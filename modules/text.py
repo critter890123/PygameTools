@@ -10,13 +10,23 @@ class Text:
         self.maxWidth = maxWidth
 
     def draw(self, screen: pygame.Surface, offset: list[int, int]):
-        rect = [position+offset for position, offset in zip(self.rect[:2], offset)] + list(self.rect[2:])
+        maxWidth = 0
+        text_rects = []
+        text_surfaces = []
+        rect = [position+offset for position, offset in zip(self.rect, offset)]
 
-        text_surface = self.font.render(self.text, False, self.color)
-        text_rect = text_surface.get_rect(center=rect) if self.center else text_surface.get_rect(topleft=rect)
-        surface = pygame.Surface((text_rect.width if self.maxWidth is None else self.maxWidth, text_rect.height), pygame.SRCALPHA, 32)
-        surface = surface.convert_alpha()
+        for index, text in enumerate(self.text.split("\n")):
+            text_surface = self.font.render(text, False, self.color)
+            text_rect = text_surface.get_rect(center=rect) if self.center else text_surface.get_rect(topleft=rect)
+            
+            if self.maxWidth and text_rect.width > self.maxWidth:
+                cropped_text_rect = text_surface.get_rect()
+                cropped_text_rect.width = self.maxWidth
+                cropped_text_surface = text_surface.subsurface(cropped_text_rect)
+                cropped_text_rect = cropped_text_surface.get_rect(center=rect) if self.center else cropped_text_surface.get_rect(topleft=rect)
 
-        surface.blit(text_surface, (0, 0))
-        screen.blit(surface, text_rect)
-        return text_rect
+                screen.blit(cropped_text_surface, cropped_text_rect)
+            else:
+                screen.blit(text_surface, text_rect)
+
+            rect[1] += self.font.size("")[1]
